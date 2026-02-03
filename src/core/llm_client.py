@@ -7,7 +7,7 @@ streaming, retries, and multiple model backends.
 
 from typing import List, Dict, Any, Optional, Iterator
 import time
-from openai import OpenAI, APIError, RateLimitError, APITimeoutError
+from openai import OpenAI, APIError, RateLimitError, APITimeoutError, AuthenticationError, APIConnectionError
 
 from ..utils.config import config
 from ..utils.logger import get_logger
@@ -122,22 +122,36 @@ class LLMClient:
                 
                 return content
                 
-            except RateLimitError:
+            except AuthenticationError as e:
+                logger.error("Authentication failed", error=str(e))
+                raise Exception(f"OpenAI Authentication Error: Invalid API key. Please check your OPENAI_API_KEY.")
+
+            except APIConnectionError as e:
+                logger.error("Connection failed", error=str(e))
+                if attempt == max_retries - 1:
+                    raise Exception(f"OpenAI Connection Error: Could not connect to OpenAI API. Error: {str(e)}")
+                time.sleep(2)
+
+            except RateLimitError as e:
                 wait_time = 2 ** attempt
                 logger.warning(
                     "Rate limit hit, retrying",
                     attempt=attempt + 1,
                     wait_time=wait_time
                 )
+                if attempt == max_retries - 1:
+                    raise Exception(f"OpenAI Rate Limit: Too many requests. You may need to add billing to your OpenAI account. Error: {str(e)}")
                 time.sleep(wait_time)
-                
-            except APITimeoutError:
+
+            except APITimeoutError as e:
                 logger.warning(
                     "API timeout, retrying",
                     attempt=attempt + 1
                 )
+                if attempt == max_retries - 1:
+                    raise Exception(f"OpenAI Timeout: Request timed out after {self.timeout}s. Try again later.")
                 time.sleep(1)
-                
+
             except APIError as e:
                 logger.error(
                     "API error occurred",
