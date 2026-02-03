@@ -13,6 +13,13 @@ import os
 from pathlib import Path
 import tempfile
 
+# Load Streamlit secrets into environment variables (for cloud deployment)
+# This allows the config module to read secrets via os.getenv()
+if hasattr(st, 'secrets'):
+    for key, value in st.secrets.items():
+        if isinstance(value, str):
+            os.environ[key] = value
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
 
