@@ -319,7 +319,13 @@ def main():
             # Show file details
             st.write(f"**Filename:** {uploaded_file.name}")
             st.write(f"**Size:** {uploaded_file.size / 1024:.2f} KB")
-            
+
+            # Preview for text files
+            if uploaded_file.name.endswith('.txt'):
+                preview = uploaded_file.getvalue().decode('utf-8')[:500]
+                with st.expander("Preview text content"):
+                    st.text(preview + ("..." if len(preview) == 500 else ""))
+
             if st.button("📥 Process and Add Document", type="primary"):
                 with st.spinner("Processing document..."):
                     try:
@@ -333,21 +339,29 @@ def main():
                         doc_data = loader.load_file(tmp_path)
                         
                         if doc_data:
-                            # Add to RAG system
-                            initial_count = st.session_state.rag_engine.document_count
-                            st.session_state.rag_engine.add_documents([doc_data])
-                            new_count = st.session_state.rag_engine.document_count
-                            chunks_created = new_count - initial_count
-                            
-                            st.session_state.documents_loaded = True
-                            
-                            st.success(f"✅ Document processed successfully!")
-                            st.info(f"Created {chunks_created} searchable chunks from this document")
-                            
-                            # Clean up
-                            os.unlink(tmp_path)
+                            # Check if text was extracted
+                            text_length = len(doc_data.get("text", ""))
+                            if text_length < 100:
+                                st.warning(f"⚠️ Document has very little text ({text_length} chars). Minimum is 100 characters.")
+                                os.unlink(tmp_path)
+                            else:
+                                # Add to RAG system
+                                initial_count = st.session_state.rag_engine.document_count
+                                st.session_state.rag_engine.add_documents([doc_data])
+                                new_count = st.session_state.rag_engine.document_count
+                                chunks_created = new_count - initial_count
+
+                                if chunks_created > 0:
+                                    st.session_state.documents_loaded = True
+                                    st.success(f"✅ Document processed successfully!")
+                                    st.info(f"Created {chunks_created} searchable chunks from this document")
+                                else:
+                                    st.warning("⚠️ Document was processed but no searchable chunks were created. The text may be too short or could not be extracted properly.")
+
+                                # Clean up
+                                os.unlink(tmp_path)
                         else:
-                            st.error("Failed to process document")
+                            st.error("Failed to process document - unsupported format or empty file")
                     
                     except Exception as e:
                         st.error(f"Error: {str(e)}")
