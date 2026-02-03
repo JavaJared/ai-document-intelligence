@@ -1,0 +1,23 @@
+# Lightweight requirements for cloud deployment (Streamlit Cloud, Hugging Face Spaces)
+# This version removes heavy dependencies and keeps only essentials
+
+# Core AI/ML Libraries
+sentence-transformers>=2.3.1
+faiss-cpu==1.13.2
+openai>=1.10.0
+
+# Data Processing
+numpy>=2.0.0
+pypdf==3.17.4
+
+# Web Framework
+streamlit>=1.29.0
+
+# Configuration & Environment
+python-dotenv==1.0.0
+
+# Logging (lightweight)
+structlog==24.1.0
+
+# Note: This minimal setup is ~500MB vs. full requirements which are ~2GB
+# Perfect for free tier hosting platforms with memory limits
