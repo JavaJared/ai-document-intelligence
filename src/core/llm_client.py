@@ -48,11 +48,16 @@ class LLMClient:
         self.temperature = temperature or config.llm.temperature
         self.max_tokens = max_tokens or config.llm.max_tokens
         
+        self.timeout = config.llm.timeout
+
         if not self.api_key:
             logger.warning("OpenAI API key not configured - using mock mode")
             self._client = None
         else:
-            self._client = OpenAI(api_key=self.api_key)
+            self._client = OpenAI(
+                api_key=self.api_key,
+                timeout=self.timeout
+            )
         
         logger.info(
             "LLM client initialized",
@@ -140,9 +145,20 @@ class LLMClient:
                     attempt=attempt + 1
                 )
                 if attempt == max_retries - 1:
-                    raise
-        
-        raise Exception("Max retries exceeded")
+                    raise Exception(f"OpenAI API error: {str(e)}")
+
+            except Exception as e:
+                logger.error(
+                    "Unexpected error during LLM call",
+                    error=str(e),
+                    error_type=type(e).__name__,
+                    attempt=attempt + 1
+                )
+                if attempt == max_retries - 1:
+                    raise Exception(f"LLM error ({type(e).__name__}): {str(e)}")
+                time.sleep(1)
+
+        raise Exception("Max retries exceeded - check your OPENAI_API_KEY in Streamlit secrets")
     
     def generate_stream(
         self,

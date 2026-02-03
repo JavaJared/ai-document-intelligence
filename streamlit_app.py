@@ -218,6 +218,12 @@ def main():
         st.code(st.session_state.rag_engine.embedding_generator.model_name, language=None)
         st.caption(f"**LLM Model:**")
         st.code(st.session_state.rag_engine.llm_client.model_name, language=None)
+
+        # API Key status
+        if st.session_state.rag_engine.llm_client._client is not None:
+            st.success("🔑 OpenAI API: Connected")
+        else:
+            st.warning("⚠️ OpenAI API: Not configured (using mock mode)")
         
         # Clear documents
         st.divider()
